@@ -1,6 +1,7 @@
 import tkinter as tk
 from backend import Backend
 import tkinter.messagebox as msgbox
+import time
 
 class Layout:
     def __init__(self):
@@ -18,6 +19,9 @@ class Layout:
         self.initTkinter()
         self.redTeamList = None
         self.whiteTeamList = None
+
+        self.awardOutput = None
+
 
     def initTkinter(self):
         self.tk.title("welcome to niumaCup")
@@ -115,15 +119,20 @@ class Layout:
 
     def showAwardFrame(self):
         awardFrame = tk.Frame(self.tk)
-        awardButton = tk.Button(awardFrame, text='结算，红方胜！', command=self.award)
+        awardButton = tk.Button(awardFrame, text='开始抽奖', command=self.award)
         awardButton.pack()
-        # TODO 输出框
+        self.awardOutput = tk.Text(awardFrame, width=30, height=30)
+        self.awardOutput.pack()
         awardFrame.pack()
 
 
     def award(self):
         randomList = self.backend.award()
-        print(randomList)
+        for rand in randomList:
+            self.awardOutput.delete(1.0, tk.END)
+            self.awardOutput.insert(tk.INSERT, rand+"\n")
+            time.sleep(0.1)
+
 
 
 

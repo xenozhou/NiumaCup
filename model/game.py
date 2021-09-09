@@ -71,7 +71,7 @@ class Game:
     def cancelSettlement(self):
         with open(GAME_RESULT_SOURCE, "r") as f:
             history = json.load(f)
-        history.pop(history['lasteGameId'], "empty")
+        history['games']['unsettled'].pop(history["lasteGameId"], "empty")
         history["lastGameId"] = -1
         with open(GAME_RESULT_SOURCE, "w") as f:
             json.dump(history, f, indent=4, ensure_ascii=False)
@@ -80,13 +80,12 @@ class Game:
     def saveResult(self, winTeam, loseTeam):
         with open(GAME_RESULT_SOURCE, "r") as f:
             history = json.load(f)
-        history['games'][self.id] = {
+        history['games']['unsettled'][self.id] = {
             "id": self.id,
             "generatedTime": self.createTime,
             "settlementTime": self.settleTime,
             "winMembers": winTeam,
-            "loseMembers": loseTeam,
-            "isSettled": self.isSettled
+            "loseMembers": loseTeam
         }
         history["lastGameId"] = self.id
         print(history)

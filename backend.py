@@ -1,17 +1,19 @@
 import os
 import json
+import random
 from model.game import Game
 from model import participants as part
+
 DATABASE_PATH = os.path.join(os.path.abspath("."), r"database.conf")
 GAME_RESULT_SOURCE = os.path.join(os.path.abspath("."), r"game_res.conf")
+
 
 class Backend:
     def __init__(self):
         with open(DATABASE_PATH, "r") as f:
             self.data = json.load(f)
         self.curGame = None
-
-
+        self.winRateBonus = 2
 
     def getAllParticipantsId(self):
         return list(self.data.keys())
@@ -29,7 +31,6 @@ class Backend:
     def shufflePlayers(self):
         return self.curGame.shuffle()
 
-
     def setTeamDivision(self, redTeamPlayerIds):
         return self.curGame.setDivision(redTeamPlayerIds)
 
@@ -40,8 +41,65 @@ class Backend:
         with open(GAME_RESULT_SOURCE, "r") as f:
             history = json.load(f)
 
-        historyMatches = history['games']
-        # TODO 剩下的部分
+        unsettledMatches = history['games']['unsettled']
+        winnersMap = {}
+        playersMap = {}
+        for k, v in unsettledMatches.items():
+            winners = v.get("winMembers", [])
+            losers = v.get("loseMembers", [])
+            for winner in winners:
+                winTime = winnersMap.get(winner, 0)
+                winTime += 1
+                winnersMap[winner] = winTime
+                playTime = playersMap.get(winner, 0)
+                playTime += 1
+                playersMap[winner] = playTime
+            for loser in losers:
+                playTime = playersMap.get(loser, 0)
+                playTime += 1
+                playersMap[loser] = playTime
+        for k in list(unsettledMatches.keys()):
+            history['games']['settled'][k] = unsettledMatches.pop(k)
+        return self.awardHelper(winnersMap, playersMap)
 
+    def awardHelper(self, wmap, pmap):
+        rateMap = {}
+        for k, v in pmap.items():
+            rateMap[k] = 1
 
+        playerNames = []
+        playerRates = []
 
+        for k, v in wmap.items():
+            rateMap[k] = rateMap[k] + self.winRateBonus * v
+            playerNames.append(self.data[k]['name'])
+            playerRates.append(rateMap[k])
+        prefix = [0 for _ in range(len(playerRates)+1)]
+        for i in range(len(playerRates)):
+            prefix[i + 1] = prefix[i] + playerRates[i]
+
+        randomTime = 30
+        randomRes = []
+        for i in range(randomTime):
+            rand = random.random() * prefix[-1]
+
+            idx = self.binarySearch(rand, prefix)
+            randomRes.append(playerNames[idx])
+            print(prefix)
+            print(rand)
+            print(playerNames[idx])
+        print(randomRes)
+        print(playerNames)
+        print(playerRates)
+        return randomRes
+
+    def binarySearch(self, target, nums):
+        left = 1
+        r = len(nums)
+        while left < r:
+            m = int((left + r) / 2)
+            if nums[m] >= target:
+                r = m
+            else:
+                left = m + 1
+        return left - 1
