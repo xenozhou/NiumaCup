@@ -24,6 +24,21 @@ class Backend:
     #         res.append(self.data[id]['name'])
     #     return res
 
+    def reflashDataBase(self, history, winMap, playMap):
+        for k, v in winMap.items():
+            self.data[k]["winCount"] += v
+        for k, v in playMap.items():
+            self.data[k]["partCount"] += v
+
+        with open(GAME_RESULT_SOURCE, 'w') as f:
+            json.dump(history, f, indent=4, ensure_ascii=False)
+        with open(DATABASE_PATH, 'w') as f:
+            json.dump(self.data, f,  indent=4, ensure_ascii=False)
+
+    def dirtyDataToDisk(self):
+        with open(DATABASE_PATH, "w") as f:
+            json.dump(self.data, f,  indent=4, ensure_ascii=False)
+
     def createNewGame(self, playersId):
         id = Game.generateId()
         self.curGame = Game(id, playersId)
@@ -40,7 +55,6 @@ class Backend:
     def award(self):
         with open(GAME_RESULT_SOURCE, "r") as f:
             history = json.load(f)
-
         unsettledMatches = history['games']['unsettled']
         winnersMap = {}
         playersMap = {}
@@ -60,6 +74,7 @@ class Backend:
                 playersMap[loser] = playTime
         for k in list(unsettledMatches.keys()):
             history['games']['settled'][k] = unsettledMatches.pop(k)
+        self.reflashDataBase(history, winnersMap, playersMap)
         return self.awardHelper(winnersMap, playersMap)
 
     def awardHelper(self, wmap, pmap):
@@ -69,25 +84,25 @@ class Backend:
 
         playerNames = []
         playerRates = []
-
+        randomTime = 30
+        randomRes = []
         for k, v in wmap.items():
             rateMap[k] = rateMap[k] + self.winRateBonus * v
+        for k, v in pmap.items():
             playerNames.append(self.data[k]['name'])
             playerRates.append(rateMap[k])
+        print("playerRates:")
+        print(playerRates)
+        if len(playerRates) == 0:
+            return randomRes
+
         prefix = [0 for _ in range(len(playerRates)+1)]
         for i in range(len(playerRates)):
             prefix[i + 1] = prefix[i] + playerRates[i]
-
-        randomTime = 30
-        randomRes = []
         for i in range(randomTime):
             rand = random.random() * prefix[-1]
-
             idx = self.binarySearch(rand, prefix)
             randomRes.append(playerNames[idx])
-            print(prefix)
-            print(rand)
-            print(playerNames[idx])
         print(randomRes)
         print(playerNames)
         print(playerRates)

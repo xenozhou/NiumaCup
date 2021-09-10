@@ -2,6 +2,7 @@ import tkinter as tk
 from backend import Backend
 import tkinter.messagebox as msgbox
 import time
+import _thread
 
 class Layout:
     def __init__(self):
@@ -16,24 +17,40 @@ class Layout:
         self.teamDividFrame = tk.Frame(self.tk)
         self.playerValue = {}
         self.playerControl = {}
+        self.awardFrame = tk.Frame(self.tk)
+
         self.initTkinter()
+        self.awardOutput = None
         self.redTeamList = None
         self.whiteTeamList = None
 
-        self.awardOutput = None
+
 
 
     def initTkinter(self):
+
         self.tk.title("welcome to niumaCup")
+        sw = self.tk.winfo_screenwidth()
+        # 得到屏幕宽度
+        sh = self.tk.winfo_screenheight()
+        # 得到屏幕高度
+        ww = 700
+        wh = 500
+        # 窗口宽高为100
+        x = (sw - ww) / 2
+        y = (sh - wh) / 2
+        self.tk.geometry("%dx%d+%d+%d" % (ww, wh, x, y))
+        labelStep1 = tk.Label(self.cardinateFrame, text="第一步，选择参赛选手\n👇")
+        labelStep1.pack(side=tk.TOP)
         for id in self.backend.getAllParticipantsId():
             checkVar = tk.IntVar()
             self.cardinateValue[id] = checkVar
             checkButton = tk.Checkbutton(self.cardinateFrame, text=self.backend.data[id]['name'], variable=checkVar, onvalue=1, offvalue=0)
-            checkButton.pack()
+            checkButton.pack(side=tk.TOP, anchor='w')
             self.cardinateControl[id] = checkButton
         selectButton = tk.Button(self.cardinateFrame, text='确认参战人员', command=self.selectPlayers)
-        selectButton.pack()
-        self.cardinateFrame.pack()
+        selectButton.pack(side=tk.TOP)
+        self.cardinateFrame.pack(side=tk.LEFT)
         self.tk.mainloop()
 
 
@@ -58,28 +75,22 @@ class Layout:
         self.backend.shufflePlayers()
 
     def showTeamDivision(self, playerIdList):
+        labelStep2 = tk.Label(self.teamDividFrame, text="第二步，划分队伍\n👇")
+        labelStep2.pack(side=tk.TOP, anchor='w')
         for id in playerIdList:
             isSelected = tk.IntVar()
             self.playerValue[id] = isSelected
             playerCheckButton = tk.Checkbutton(self.teamDividFrame, text=self.backend.data[id]['name'], variable=isSelected, onvalue=1, offvalue=0)
             self.playerControl[id] = playerCheckButton
-            playerCheckButton.pack()
+            playerCheckButton.pack(side=tk.TOP, anchor='w')
         confirmDivisionButton = tk.Button(self.teamDividFrame, text='确认勾选的选手为一队', command=self.confirmDivision)
         shuffleDivisionButton = tk.Button(self.teamDividFrame, text='随机分配队伍', command=self.suffleDivision)
-        confirmDivisionButton.pack()
-        shuffleDivisionButton.pack()
+        confirmDivisionButton.pack(side=tk.TOP, anchor='w')
+        shuffleDivisionButton.pack(side=tk.TOP, anchor='w')
 
-        self.redTeamList = tk.Listbox(self.teamDividFrame)
-        self.whiteTeamList = tk.Listbox(self.teamDividFrame)
-        self.redTeamList.pack()
-        self.whiteTeamList.pack()
 
-        redWinButton = tk.Button(self.teamDividFrame, text='结算，红方胜！', command=self.settlementRed)
-        whiteWinButton = tk.Button(self.teamDividFrame, text='结算，白方胜！', command=self.settlementWhite)
-        redWinButton.pack()
-        whiteWinButton.pack()
 
-        self.teamDividFrame.pack(side=tk.RIGHT)
+        self.teamDividFrame.pack(side = tk.LEFT)
         self.showAwardFrame()
 
 
@@ -118,20 +129,44 @@ class Layout:
         self.backend.settlement(side)
 
     def showAwardFrame(self):
-        awardFrame = tk.Frame(self.tk)
-        awardButton = tk.Button(awardFrame, text='开始抽奖', command=self.award)
+        self.redTeamList = tk.Listbox(self.awardFrame)
+        self.whiteTeamList = tk.Listbox(self.awardFrame)
+        self.redTeamList.pack(side=tk.LEFT)
+        self.whiteTeamList.pack(side=tk.LEFT)
+
+        redWinButton = tk.Button(self.awardFrame, text='结算，红方胜！', command=self.settlementRed)
+        whiteWinButton = tk.Button(self.awardFrame, text='结算，白方胜！', command=self.settlementWhite)
+        redWinButton.pack(side=tk.TOP)
+        whiteWinButton.pack(side=tk.TOP)
+
+        awardButton = tk.Button(self.awardFrame, text='开始抽奖', command=self.award)
         awardButton.pack()
-        self.awardOutput = tk.Text(awardFrame, width=30, height=30)
+        self.awardOutput = tk.Text(self.awardFrame, width=30, height=30)
         self.awardOutput.pack()
-        awardFrame.pack()
+        self.awardFrame.pack(side=tk.LEFT)
 
 
     def award(self):
         randomList = self.backend.award()
+        if len(randomList) == 0:
+            self.throwErrorMessage("抽奖错误", "不存在未参与抽奖的比赛！请至少先结算一场比赛！")
+            return
+        self.asyncFunc(self.awardResultDisplay, (randomList,))
+
+
+    def awardResultDisplay(self, randomList):
         for rand in randomList:
             self.awardOutput.delete(1.0, tk.END)
             self.awardOutput.insert(tk.INSERT, rand+"\n")
-            time.sleep(0.1)
+            time.sleep(0.2)
+        self.awardOutput.insert(tk.INSERT, "让我们恭喜这个逼获奖👆")
+
+    def asyncFunc(self, func, args):
+        _thread.start_new_thread(func, args)
+        # try:
+        #     _thread.start_new_thread(func, args)
+        # except:
+        #     self.throwErrorMessage("程序内部错误", "请联系xenozhou！")
 
 
 
